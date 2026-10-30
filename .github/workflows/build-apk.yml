@@ -67,6 +67,13 @@ jobs:
             exit 1
           fi
           echo "root=$ROOT" >> "$GITHUB_OUTPUT"
+          touch "$ROOT/gradle.properties"
+          if ! grep -q "^android.useAndroidX=true$" "$ROOT/gradle.properties"; then
+            echo "android.useAndroidX=true" >> "$ROOT/gradle.properties"
+          fi
+          if ! grep -q "^android.enableJetifier=true$" "$ROOT/gradle.properties"; then
+            echo "android.enableJetifier=true" >> "$ROOT/gradle.properties"
+          fi
           echo "Project root: $ROOT"
 
       - name: Build debug APK
