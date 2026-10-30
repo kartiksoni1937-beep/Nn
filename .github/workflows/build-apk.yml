@@ -80,6 +80,7 @@ jobs:
         working-directory: ${{ steps.locate.outputs.root }}
         shell: bash
         run: |
+          echo "Starting Gradle assembleDebug..."
           if [ -f ./gradlew ]; then
             chmod +x ./gradlew
             ./gradlew --no-daemon assembleDebug
