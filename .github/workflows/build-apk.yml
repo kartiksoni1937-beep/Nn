@@ -1,0 +1,75 @@
+name: Build Android APK
+
+on:
+  push:
+    paths:
+      - 'DevicePerformanceUnlocker.zip'
+      - '.github/workflows/build-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Extract project archive
+        run: |
+          mkdir -p project
+          unzip -q DevicePerformanceUnlocker.zip -d project
+          echo "Archive contents:"
+          find project -maxdepth 3 -type f | head -100
+
+      - name: Locate Android Gradle project
+        id: locate
+        shell: bash
+        run: |
+          ROOT=""
+          while IFS= read -r file; do
+            ROOT="$(dirname "$file")"
+            break
+          done < <(find project -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print)
+          if [ -z "$ROOT" ]; then
+            while IFS= read -r file; do
+              ROOT="$(dirname "$file")"
+              break
+            done < <(find project -type f \( -name gradlew -o -name build.gradle -o -name build.gradle.kts \) -print)
+          fi
+          if [ -z "$ROOT" ]; then
+            echo "::error::No Gradle project files found in DevicePerformanceUnlocker.zip"
+            exit 1
+          fi
+          echo "root=$ROOT" >> "$GITHUB_OUTPUT"
+          echo "Project root: $ROOT"
+
+      - name: Build debug APK
+        working-directory: ${{ steps.locate.outputs.root }}
+        shell: bash
+        run: |
+          if [ -f ./gradlew ]; then
+            chmod +x ./gradlew
+            ./gradlew --no-daemon assembleDebug
+          else
+            gradle --no-daemon assembleDebug
+          fi
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DevicePerformanceUnlocker-debug-apk
+          path: project/**/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+          retention-days: 14
